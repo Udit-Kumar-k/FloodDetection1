@@ -41,7 +41,7 @@ if __name__ == '__main__':
     ])
 
     # Load dataset (replace 'dataset_path' with your actual path)
-    dataset = datasets.ImageFolder(r'C:\Users\udith\Downloads\Flood Dataset mix\dataset', transform=transform)
+    dataset = datasets.ImageFolder(r'C:\Users\udith\Downloads\FinalFloodDataset\dataset', transform=transform)
 
     # Calculate the split sizes (80% training, 10% validation, 10% testing)
     train_size = int(0.8 * len(dataset))
