@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flood Detection AI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #00e1ff;
+            --secondary: #0077cc;
+            --glass-bg: rgba(10, 25, 47, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.15);
+            --text-main: #ffffff;
+            --text-muted: #b3c5d6;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+            background-color: #050b14;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Background Slideshow */
+        .slideshow-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background-color: #000;
+        }
+
+        .slideshow-container::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(2, 10, 24, 0.85) 0%, rgba(10, 25, 50, 0.7) 100%);
+            z-index: 1;
+        }
+
+        .slideshow-container img {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            transition: opacity 1.5s ease-in-out, transform 10s ease-in-out;
+            transform: scale(1.05); /* Slight zoom effect start */
+        }
+
+        .slideshow-container img.active {
+            opacity: 1;
+            transform: scale(1); /* Smooth settle out */
+        }
+
+        /* Main UI Container */
+        .main-wrapper {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            max-width: 600px;
+            padding: 20px;
+            margin: 40px auto;
+        }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255,255,255,0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .glass-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255,255,255,0.08);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #00e1ff, #34d399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        p.subtitle {
+            color: var(--text-muted);
+            font-size: 1.05rem;
+            line-height: 1.5;
+            font-weight: 300;
+        }
+
+        /* Upload Area */
+        .upload-zone {
+            border: 2px dashed rgba(0, 225, 255, 0.3);
+            border-radius: 16px;
+            padding: 30px 20px;
+            background: rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .upload-zone:hover {
+            border-color: var(--primary);
+            background: rgba(0, 225, 255, 0.05);
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .custom-file-upload {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 100px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            gap: 10px;
+        }
+
+        .custom-file-upload:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        #selected-image {
+            margin-top: 20px;
+            max-width: 100%;
+            max-height: 250px;
+            display: none;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            object-fit: cover;
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Primary Button */
+        button.run-btn {
+            background: linear-gradient(135deg, #0077cc 0%, #00e1ff 100%);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 225, 255, 0.3);
+            width: 100%;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button.run-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 225, 255, 0.5);
+            background: linear-gradient(135deg, #0088eb 0%, #34d399 100%);
+        }
+
+        button.run-btn:active {
+            transform: translateY(1px);
+        }
+
+        /* Results & Loading */
+        .loading-bar-container {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            margin-top: 10px;
+            display: none;
+            overflow: hidden;
+        }
+
+        .loading-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #0077cc, #00e1ff, #34d399);
+            width: 0%;
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+
+        .result-container {
+            display: none;
+            padding: 20px;
+            border-radius: 12px;
+            background: rgba(0, 225, 255, 0.1);
+            border: 1px solid rgba(0, 225, 255, 0.3);
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        .result-container h3 {
+            font-size: 1rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        #flood-status {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #fff;
+        }
+        
+        .status-flooded { color: #ff4d4d !important; text-shadow: 0 0 10px rgba(255, 77, 77, 0.5); }
+        .status-safe { color: #34d399 !important; text-shadow: 0 0 10px rgba(52, 211, 153, 0.5); }
+
+        /* Information Section integrated into card */
+        .info-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .info-section p.about-text {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        .did-you-know-box {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            font-size: 0.85rem;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 80px;
+        }
+
+        .did-you-know-text {
+            opacity: 1;
+            transition: opacity 0.5s ease;
+        }
+        
+        .did-you-know-text.fade {
+            opacity: 0;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Background Images -->
+    <div class="slideshow-container" id="slideshow">
+        <img src="static/images/istockphoto-1327617934-612x612.jpg" class="active" alt="Flood">
+        <img src="static/images/vjkvg-donars 3.jpg" alt="Flood">
+        <img src="static/images/germanyfloods_1280x720.jpg" alt="Flood">
+        <img src="static/images/How_Does_a_Flood_Happen_Featured.jpg" alt="Flood">
+        <img src="static/images/india_flood.jpg" alt="Flood">
+    </div>
+
+    <!-- Main Interface -->
+    <div class="main-wrapper">
+        <div class="glass-card">
+            
+            <header>
+                <h1>Flood AI</h1>
+                <p class="subtitle">Upload satellite or geographic imagery for real-time neural network detection.</p>
+            </header>
+
+            <div class="upload-zone">
+                <label for="imageUpload" class="custom-file-upload">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0l-4 4m4-4v12"></path></svg>
+                    Select an Image
+                </label>
+                <input type="file" id="imageUpload" accept="image/*" onchange="previewImage(event)">
+                <img id="selected-image" alt="Selected Preview">
+            </div>
+
+            <button class="run-btn" onclick="uploadImage()">Run Analysis</button>
+
+            <div class="loading-bar-container" id="loading-bar-container">
+                <div class="loading-bar" id="loading-bar"></div>
+            </div>
+
+            <div class="result-container" id="result-container">
+                <h3>Analysis Result</h3>
+                <div id="flood-status">Pending...</div>
+            </div>
+
+            <div class="info-section">
+                <p class="about-text">
+                    This model utilizes a custom PyTorch Convolutional Neural Network (CNN) to visually scan topological features and instantly determine the likelihood of severe flooding.
+                </p>
+                <div class="did-you-know-box">
+                    <span class="did-you-know-text" id="did-you-know">
+                        Did you know? Floods are the most common natural disaster worldwide, causing billions of dollars in damage each year.
+                    </span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Slideshow Engine
+        const slideshowImages = document.querySelectorAll('#slideshow img');
+        let currentIndex = 0;
+        setInterval(() => {
+            slideshowImages[currentIndex].classList.remove('active');
+            currentIndex = (currentIndex + 1) % slideshowImages.length;
+            slideshowImages[currentIndex].classList.add('active');
+        }, 6000);
+
+        // Preview rendering
+        function previewImage(event) {
+            const file = event.target.files[0];
+            const selectedImage = document.getElementById('selected-image');
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    selectedImage.src = e.target.result;
+                    selectedImage.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+                
+                // Hide past results when new image chosen
+                document.getElementById('result-container').style.display = 'none';
+            }
+        }
+
+        // Upload and Fetch Prediction
+        function uploadImage() {
+            const fileInput = document.getElementById('imageUpload');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert("Please select an image file to analyze before running detection!");
+                return;
+            }
+
+            const loadingBarContainer = document.getElementById('loading-bar-container');
+            const loadingBar = document.getElementById('loading-bar');
+            const resultContainer = document.getElementById('result-container');
+            const floodStatus = document.getElementById('flood-status');
+
+            // UI Reset
+            resultContainer.style.display = 'none';
+            loadingBarContainer.style.display = 'block';
+            loadingBar.style.width = '0%';
+            floodStatus.className = ''; 
+
+            // Fake progress bar animation for UX
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += 15;
+                if(progress > 90) progress = 90;
+                loadingBar.style.width = `${progress}%`;
+            }, 100);
+
+            // API Call
+            const formData = new FormData();
+            formData.append('file', file);
+
+            fetch('/predict', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                clearInterval(progressInterval);
+                loadingBar.style.width = '100%';
+                
+                setTimeout(() => {
+                    loadingBarContainer.style.display = 'none';
+                    resultContainer.style.display = 'block';
+                    
+                    if (data.result === 'Flooded') {
+                        floodStatus.textContent = "⚠ FLOOD DETECTED";
+                        floodStatus.classList.add('status-flooded');
+                    } else {
+                        floodStatus.textContent = "✔ SAFE / CLEAR";
+                        floodStatus.classList.add('status-safe');
+                    }
+                }, 300);
+            })
+            .catch(err => {
+                clearInterval(progressInterval);
+                loadingBarContainer.style.display = 'none';
+                alert("Server Error: Make sure your app.py is currently running.");
+            });
+        }
+
+        // Animated Fun Facts
+        const facts = [
+            "Did you know? Floods are the most common natural disaster worldwide.",
+            "Did you know? Over 2 billion people are affected by floods every year.",
+            "Did you know? Flooding causes more than 6,000 deaths annually globally.",
+            "Did you know? In 2017, floods caused over $60 billion in damages worldwide.",
+            "Did you know? As little as 6 inches of fast-moving water can knock over an adult."
+        ];
+        const factElement = document.getElementById('did-you-know');
+        let factIndex = 0;
+
+        setInterval(() => {
+            factElement.classList.add('fade');
+            setTimeout(() => {
+                factIndex = (factIndex + 1) % facts.length;
+                factElement.textContent = facts[factIndex];
+                factElement.classList.remove('fade');
+            }, 500); 
+        }, 7000);
+
+    </script>
+</body>
+</html>
